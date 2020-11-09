@@ -43,7 +43,7 @@
     "doc:dev": "run-p doc:build && run-p doc:watch doc:serve"
   },
   "dependencies": {
-    "@mildjs/di": "^1.4.0",
+    "@mildjs/di": "^1.4.1",
     "connect": "^3.7.0",
     "http-status-codes": "^2.1.4"
   },

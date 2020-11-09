@@ -6,7 +6,7 @@ import { DynamicModule, MiddlewareMetadataArgs, RequestMethod } from '../interfa
 import { combineMiddlewares } from '../utils';
 import { CombineRoute, combineRouteWithMiddleware } from './combine-route-with-middleware';
 // import { ReflectiveInjector, InjectionToken, Injectable, Type, Provider } from 'injection-js';
-import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, getClassName } from '@mildjs/di';
+import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, getClassName, isPromise } from '@mildjs/di';
 
 /**
  * `ExpressAppOption` is for setting up the **Root ModuleMetadata**,
@@ -16,9 +16,8 @@ import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, g
 // tslint:disable-next-line:no-empty-interface
 export interface ExpressAppOption extends ModuleMetadata { }
 
-export function useExpressServer(app: express.Application, option?: ExpressAppOption) {
+export async function useExpressServer(app: express.Application, option?: ExpressAppOption) {
 
-  console.log('heyyyyyyyyyy');
   const rootImportModules = option?.imports || [];
   const rootControllerClasses = option?.controllers || [];
   const rootProviderClasses = option?.providers || [];
@@ -30,23 +29,56 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
   let moduleClass: Constructor<any>;
 
   /**
+   * Step 0: Resolved all promise
+   */
+
+  let rootResolvedImportModules: any[] = [];
+
+  const promiseImportModules: any[] = [];
+  const NonPromiseImportModules: any[] = [];
+  rootImportModules.forEach((importModule: any) => {
+    if (isPromise(importModule)) {
+      promiseImportModules.push(importModule);
+    } else {
+      NonPromiseImportModules.push(importModule);
+    }
+    // throw new Error(`Can't resolve promise of DynamicModule: ${err}`);
+  });
+
+  console.log('promiseImportModules');
+  console.log(promiseImportModules);
+
+  // Resolved all promise
+
+  rootResolvedImportModules = await Promise.all(promiseImportModules);
+  rootResolvedImportModules = rootResolvedImportModules.concat(NonPromiseImportModules);
+
+  console.log('rootResolvedImportModules');
+  console.log(rootResolvedImportModules);
+
+  console.log('rootImportModules');
+  console.log(rootImportModules);
+
+  console.log(`size compare should be true: ${rootResolvedImportModules.length === rootImportModules.length}`)
+
+  /**
    * Step 1: Collect all DynamicModule providers
    */
 
   let rootDynamicModuleProviders: Provider[] = [];
-  rootImportModules.forEach((importModule: any) => {
+  rootResolvedImportModules.forEach((importModule: any) => {
     // If the rootImportModules is DynamicModule
     if (importModule.hasOwnProperty('module')) {
       const dynamicModule: DynamicModule = importModule;
       rootDynamicModuleProviders = rootDynamicModuleProviders.concat(dynamicModule?.providers || []);
-    } 
+    }
   });
 
   /**
    * Step 2: Import All root modules to express App
    */
 
-  rootImportModules.forEach((importModule: any) => {
+  rootResolvedImportModules.forEach((importModule: any) => {
     // If the rootImportModules is DynamicModule
 
     if (importModule.hasOwnProperty('module')) {
@@ -63,7 +95,7 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
       /**
        * Attach all `rootDynamicModuleProviders` to each root module metadata
        */
-       rootModuleMetadata.providers = (rootModuleMetadata.providers || []).concat(rootDynamicModuleProviders);
+      rootModuleMetadata.providers = (rootModuleMetadata.providers || []).concat(rootDynamicModuleProviders);
 
     } else if (isConstructor(importModule)) {
       moduleClass = importModule; // Assign module class for creating the instance
@@ -117,7 +149,7 @@ function addModule(app: express.Application, module: ModuleMetadata, rootProvide
     providers.forEach(provider => {
       console.log(`${provider}`);
     })
- 
+
 
     const injector = ReflectiveInjector.init([controller, ...providers, ...rootProvidersClasses]);
     // console.log(rootProvidersClasses);

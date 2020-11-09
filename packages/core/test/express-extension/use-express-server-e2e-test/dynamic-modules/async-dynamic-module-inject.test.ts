@@ -18,22 +18,32 @@ class MockController {
 
 @Module()
 class MockDynamicModule {
-    static forRoot(): DynamicModule {
+    static async forRootAsync(): Promise<DynamicModule> {
+
+        const asyncFunc = () => new Promise(resolve =>
+            setTimeout(() => { resolve("data from dynamic module") }, 100)
+        );
+
+        const provider = {
+            provide: "mock_token",
+            useFactory:  () => async () => await asyncFunc()
+        }
         return {
             module: MockDynamicModule,
-            providers: [ { provide: 'mock_token', useValue: "data from dynamic module"}]
-        }
+            providers : [provider]
+        };
+
     }
 }
 
-describe('Module with controller GET (e2e)', () => {
+describe('async-dynamic-module-inject GET (e2e)', () => {
 
     let app: express.Application;
     beforeAll(async () => {
         app = express();
         await useExpressServer(app, {
             controllers: [MockController],
-            imports: [MockDynamicModule.forRoot()]
+            imports: [MockDynamicModule.forRootAsync()]
         });
         app.listen();
     });
