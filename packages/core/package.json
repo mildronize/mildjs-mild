@@ -1,6 +1,6 @@
 {
   "name": "@mildjs/core",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "author": "Thada Wangthammang",
   "description": "Simple Express decorator for router",
   "directories": {
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mildronize/mildjs.git"
+    "url": "git+https://github.com/mildjs/mild.git"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,9 +19,9 @@
     "npm": ">=5"
   },
   "bugs": {
-    "url": "https://github.com/mildronize/mildjs/issues"
+    "url": "https://github.com/mildjs/mild/issues"
   },
-  "homepage": "https://github.com/mildronize/mildjs#readme",
+  "homepage": "https://github.com/mildjs/mild#readme",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "chokidar \"src/**/*.ts\" -c \"npm link\"",
