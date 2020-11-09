@@ -6,7 +6,7 @@ import { DynamicModule, MiddlewareMetadataArgs, RequestMethod } from '../interfa
 import { combineMiddlewares } from '../utils';
 import { CombineRoute, combineRouteWithMiddleware } from './combine-route-with-middleware';
 // import { ReflectiveInjector, InjectionToken, Injectable, Type, Provider } from 'injection-js';
-import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider } from '@mildjs/di';
+import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, getClassName } from '@mildjs/di';
 
 /**
  * `ExpressAppOption` is for setting up the **Root ModuleMetadata**,
@@ -14,13 +14,18 @@ import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider } 
  */
 
 // tslint:disable-next-line:no-empty-interface
-export interface ExpressAppOption extends ModuleMetadata {}
+export interface ExpressAppOption extends ModuleMetadata { }
 
 export function useExpressServer(app: express.Application, option?: ExpressAppOption) {
+
+  console.log('heyyyyyyyyyy');
   const rootImportModules = option?.imports || [];
   const rootControllerClasses = option?.controllers || [];
   const rootProviderClasses = option?.providers || [];
 
+  let rootModuleMetadata: ModuleMetadata = {
+    controllers: rootControllerClasses
+  };
   let moduleMetadata: ModuleMetadata;
   let moduleClass: Constructor<any>;
 
@@ -34,7 +39,7 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
     if (importModule.hasOwnProperty('module')) {
       const dynamicModule: DynamicModule = importModule;
       rootDynamicModuleProviders = rootDynamicModuleProviders.concat(dynamicModule?.providers || []);
-    }
+    } 
   });
 
   /**
@@ -48,6 +53,18 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
       // console.log("hey i'm dynamicModule");
       const dynamicModule: DynamicModule = importModule;
       moduleClass = dynamicModule.module; // Assign module class for creating the instance
+
+      /**
+       * Dynamic Module can't use moduleMetadata, moduleMetadata will be empty
+       */
+
+      moduleMetadata = {};
+
+      /**
+       * Attach all `rootDynamicModuleProviders` to each root module metadata
+       */
+       rootModuleMetadata.providers = (rootModuleMetadata.providers || []).concat(rootDynamicModuleProviders);
+
     } else if (isConstructor(importModule)) {
       moduleClass = importModule; // Assign module class for creating the instance
 
@@ -60,6 +77,7 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
        * Attach all `rootDynamicModuleProviders` to each module metadata
        */
       moduleMetadata.providers = (moduleMetadata.providers || []).concat(rootDynamicModuleProviders);
+
     } else {
       throw new Error('No module provided');
     }
@@ -78,7 +96,7 @@ export function useExpressServer(app: express.Application, option?: ExpressAppOp
    * Step 3: Using import root controller only, strongly recommend to import with modules
    */
 
-  if (rootControllerClasses.length > 0) addModule(app, { controllers: rootControllerClasses }, rootProviderClasses);
+  if (rootControllerClasses.length > 0) addModule(app, rootModuleMetadata, rootProviderClasses);
 
   return true;
 }
@@ -94,6 +112,12 @@ function addModule(app: express.Application, module: ModuleMetadata, rootProvide
      * Resolving the dependencies of controllers and services
      * Then, get controller instance
      */
+    console.log(`running controller... ${getClassName(controller)}`)
+    console.log(`use provider... `)
+    providers.forEach(provider => {
+      console.log(`${provider}`);
+    })
+ 
 
     const injector = ReflectiveInjector.init([controller, ...providers, ...rootProvidersClasses]);
     // console.log(rootProvidersClasses);

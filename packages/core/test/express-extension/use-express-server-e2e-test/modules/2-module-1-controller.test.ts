@@ -1,4 +1,4 @@
-import { Controller, Get, Module, useExpressServer } from '../../../src';
+import { Controller, Get, Module, useExpressServer } from '../../../../src';
 import express, { Response } from "express";
 import request from 'supertest';
 
@@ -21,7 +21,12 @@ class MockController {
 }
 
 @Module({
-    controllers: [MockController, ExtraMockController]
+    controllers: [ExtraMockController]
+})
+class ExtraMockModule { }
+
+@Module({
+    controllers: [MockController]
 })
 class MockModule { }
 

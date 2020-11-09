@@ -5,6 +5,10 @@
 -  [ ] new packages `@mildjs/typeorm`
 -  [ ] Throw error on runtime failure (When wrong usage)
 
+## Dynamic Module
+-  [X] Add test for dynamic modules
+-  [X] Add test for dynamic modules with root controllers
+ 
 
 # Improvement
 
