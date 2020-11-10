@@ -6,7 +6,15 @@ import { DynamicModule, MiddlewareMetadataArgs, RequestMethod } from '../interfa
 import { combineMiddlewares } from '../utils';
 import { CombineRoute, combineRouteWithMiddleware } from './combine-route-with-middleware';
 // import { ReflectiveInjector, InjectionToken, Injectable, Type, Provider } from 'injection-js';
-import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, getClassName, isPromise } from '@mildjs/di';
+import {
+  ReflectiveInjector,
+  Injectable,
+  Constructor,
+  isConstructor,
+  Provider,
+  getClassName,
+  isPromise,
+} from '@mildjs/di';
 
 /**
  * `ExpressAppOption` is for setting up the **Root ModuleMetadata**,
@@ -14,16 +22,15 @@ import { ReflectiveInjector, Injectable, Constructor, isConstructor, Provider, g
  */
 
 // tslint:disable-next-line:no-empty-interface
-export interface ExpressAppOption extends ModuleMetadata { }
+export interface ExpressAppOption extends ModuleMetadata {}
 
 export async function useExpressServer(app: express.Application, option?: ExpressAppOption) {
-
   const rootImportModules = option?.imports || [];
   const rootControllerClasses = option?.controllers || [];
   const rootProviderClasses = option?.providers || [];
 
-  let rootModuleMetadata: ModuleMetadata = {
-    controllers: rootControllerClasses
+  const rootModuleMetadata: ModuleMetadata = {
+    controllers: rootControllerClasses,
   };
   let moduleMetadata: ModuleMetadata;
   let moduleClass: Constructor<any>;
@@ -45,21 +52,10 @@ export async function useExpressServer(app: express.Application, option?: Expres
     // throw new Error(`Can't resolve promise of DynamicModule: ${err}`);
   });
 
-  console.log('promiseImportModules');
-  console.log(promiseImportModules);
-
   // Resolved all promise
 
   rootResolvedImportModules = await Promise.all(promiseImportModules);
   rootResolvedImportModules = rootResolvedImportModules.concat(NonPromiseImportModules);
-
-  console.log('rootResolvedImportModules');
-  console.log(rootResolvedImportModules);
-
-  console.log('rootImportModules');
-  console.log(rootImportModules);
-
-  console.log(`size compare should be true: ${rootResolvedImportModules.length === rootImportModules.length}`)
 
   /**
    * Step 1: Collect all DynamicModule providers
@@ -82,7 +78,6 @@ export async function useExpressServer(app: express.Application, option?: Expres
     // If the rootImportModules is DynamicModule
 
     if (importModule.hasOwnProperty('module')) {
-      // console.log("hey i'm dynamicModule");
       const dynamicModule: DynamicModule = importModule;
       moduleClass = dynamicModule.module; // Assign module class for creating the instance
 
@@ -96,7 +91,6 @@ export async function useExpressServer(app: express.Application, option?: Expres
        * Attach all `rootDynamicModuleProviders` to each root module metadata
        */
       rootModuleMetadata.providers = (rootModuleMetadata.providers || []).concat(rootDynamicModuleProviders);
-
     } else if (isConstructor(importModule)) {
       moduleClass = importModule; // Assign module class for creating the instance
 
@@ -109,7 +103,6 @@ export async function useExpressServer(app: express.Application, option?: Expres
        * Attach all `rootDynamicModuleProviders` to each module metadata
        */
       moduleMetadata.providers = (moduleMetadata.providers || []).concat(rootDynamicModuleProviders);
-
     } else {
       throw new Error('No module provided');
     }
@@ -120,7 +113,6 @@ export async function useExpressServer(app: express.Application, option?: Expres
      */
 
     const module = createModuleInstance(moduleClass);
-    // console.log('Module Name: ' + module.constructor.name);
     addModule(app, moduleMetadata, rootProviderClasses);
   });
 
@@ -134,26 +126,18 @@ export async function useExpressServer(app: express.Application, option?: Expres
 }
 
 function addModule(app: express.Application, module: ModuleMetadata, rootProvidersClasses: Provider[]) {
-  // console.log('Run addModule ');
   const store = getMetadataArgsStore();
   const controllers = module.controllers || [];
   const providers = module.providers || [];
 
-  controllers.forEach((controller) => {
+  controllers.forEach(async (controller) => {
     /**
      * Resolving the dependencies of controllers and services
      * Then, get controller instance
      */
-    console.log(`running controller... ${getClassName(controller)}`)
-    console.log(`use provider... `)
-    providers.forEach(provider => {
-      console.log(`${provider}`);
-    })
-
 
     const injector = ReflectiveInjector.init([controller, ...providers, ...rootProvidersClasses]);
-    // console.log(rootProvidersClasses);
-    const controllerInstance = injector.get(controller) as typeof controller;
+    const controllerInstance = (await injector.get(controller)) as typeof controller;
 
     const combinedRoutes = combineRouteWithMiddleware(controller, store.routes, store.middlewares);
     addRouterToExpress(app, combinedRoutes, controllerInstance);
